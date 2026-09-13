@@ -1,0 +1,119 @@
+// Decision Debt — Prisma schema
+// Postgres. Run `npx prisma migrate dev --name init` after setting DATABASE_URL.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DecisionStatus {
+  ACTIVE
+  STALE
+  SUPERSEDED
+  WORKAROUND
+}
+
+enum EvidenceType {
+  COMMIT
+  PULL_REQUEST
+  ISSUE
+  DOC
+}
+
+enum IngestionStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model Repository {
+  id            String          @id @default(cuid())
+  owner         String
+  name          String
+  githubId      BigInt          @unique
+  defaultBranch String          @default("main")
+  connectedAt   DateTime        @default(now())
+  lastSyncedAt  DateTime?
+
+  contributors  Contributor[]
+  decisions     Decision[]
+  ingestionJobs IngestionJob[]
+
+  @@unique([owner, name])
+}
+
+model Contributor {
+  id           String     @id @default(cuid())
+  repository   Repository @relation(fields: [repositoryId], references: [id])
+  repositoryId String
+  githubLogin  String
+  displayName  String?
+
+  decisions    Decision[] @relation("DecisionOwner")
+
+  @@unique([repositoryId, githubLogin])
+}
+
+model Decision {
+  id             String         @id @default(cuid())
+  repository     Repository     @relation(fields: [repositoryId], references: [id])
+  repositoryId   String
+
+  title          String
+  category       String         // e.g. "architecture", "dependency", "workaround", "api-contract"
+  status         DecisionStatus @default(ACTIVE)
+  confidence     Float          @default(0.5) // 0-1, how sure the heuristic/AI is
+
+  summary        String?        // short human/AI-readable explanation
+  component      String?        // e.g. "auth", "billing", subsystem tag
+
+  primaryOwner   Contributor?   @relation("DecisionOwner", fields: [primaryOwnerId], references: [id])
+  primaryOwnerId String?
+
+  firstSeenAt    DateTime       // when the decision first appears in history
+  lastTouchedAt  DateTime       // most recent related activity
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  evidence       Evidence[]
+
+  @@index([repositoryId, status])
+  @@index([repositoryId, category])
+}
+
+model Evidence {
+  id          String       @id @default(cuid())
+  decision    Decision     @relation(fields: [decisionId], references: [id])
+  decisionId  String
+
+  type        EvidenceType
+  sourceUrl   String
+  externalRef String       // sha, PR number, issue number, or doc path
+  excerpt     String?      // short quoted/paraphrased snippet used as proof
+  authorLogin String?
+  occurredAt  DateTime
+
+  @@index([decisionId])
+}
+
+model IngestionJob {
+  id           String          @id @default(cuid())
+  repository   Repository      @relation(fields: [repositoryId], references: [id])
+  repositoryId String
+
+  status       IngestionStatus @default(PENDING)
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  error        String?
+  stats        Json?           // e.g. { commits: 1200, prs: 340, issues: 210 }
+
+  createdAt    DateTime        @default(now())
+
+  @@index([repositoryId, status])
+}
