@@ -4,11 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --watch src/index.js",
+    "dev": "node src/index.js",
+    "dev:watch": "node --watch src/index.js",
     "start": "node src/index.js",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "db:setup": "sqlite3 prisma/dev.db < prisma/init.sql"
   },
   "dependencies": {
     "@octokit/rest": "^20.1.1",

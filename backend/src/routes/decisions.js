@@ -26,7 +26,8 @@ router.get("/", async (req, res) => {
     ...(category ? { category } : {}),
     ...(status ? { status } : {}),
     ...(component ? { component } : {}),
-    ...(search ? { title: { contains: search, mode: "insensitive" } } : {}),
+    // SQLite does not support Prisma's PostgreSQL-specific `mode` option.
+    ...(search ? { title: { contains: search } } : {}),
     ...(from || to
       ? {
           firstSeenAt: {

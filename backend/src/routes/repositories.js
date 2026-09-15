@@ -24,7 +24,9 @@ router.post("/", async (req, res) => {
       create: {
         owner,
         name,
-        githubId: ghRepo.data.id,
+        // SQLite has no native 64-bit integer column; keeping this as a string
+        // also avoids JSON serialization issues with JavaScript BigInts.
+        githubId: String(ghRepo.data.id),
         defaultBranch: ghRepo.data.default_branch,
       },
     });

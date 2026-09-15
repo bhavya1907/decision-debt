@@ -35,11 +35,11 @@ export async function ingestRepository({ repositoryId, owner, name, since }) {
       data: {
         status: "SUCCEEDED",
         finishedAt: new Date(),
-        stats: {
+        stats: JSON.stringify({
           commits: commits.length,
           pulls: pulls.length,
           issues: issues.length,
-        },
+        }),
       },
     });
 

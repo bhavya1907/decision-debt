@@ -1,41 +1,20 @@
 // Decision Debt — Prisma schema
-// Postgres. Run `npx prisma migrate dev --name init` after setting DATABASE_URL.
+// SQLite keeps the MVP runnable locally with no external database service.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
-}
-
-enum DecisionStatus {
-  ACTIVE
-  STALE
-  SUPERSEDED
-  WORKAROUND
-}
-
-enum EvidenceType {
-  COMMIT
-  PULL_REQUEST
-  ISSUE
-  DOC
-}
-
-enum IngestionStatus {
-  PENDING
-  RUNNING
-  SUCCEEDED
-  FAILED
 }
 
 model Repository {
   id            String          @id @default(cuid())
   owner         String
   name          String
-  githubId      BigInt          @unique
+  githubId      String          @unique
   defaultBranch String          @default("main")
   connectedAt   DateTime        @default(now())
   lastSyncedAt  DateTime?
@@ -66,7 +45,7 @@ model Decision {
 
   title          String
   category       String         // e.g. "architecture", "dependency", "workaround", "api-contract"
-  status         DecisionStatus @default(ACTIVE)
+  status         String         @default("ACTIVE")
   confidence     Float          @default(0.5) // 0-1, how sure the heuristic/AI is
 
   summary        String?        // short human/AI-readable explanation
@@ -92,7 +71,7 @@ model Evidence {
   decision    Decision     @relation(fields: [decisionId], references: [id])
   decisionId  String
 
-  type        EvidenceType
+  type        String
   sourceUrl   String
   externalRef String       // sha, PR number, issue number, or doc path
   excerpt     String?      // short quoted/paraphrased snippet used as proof
@@ -107,11 +86,11 @@ model IngestionJob {
   repository   Repository      @relation(fields: [repositoryId], references: [id])
   repositoryId String
 
-  status       IngestionStatus @default(PENDING)
+  status       String          @default("PENDING")
   startedAt    DateTime?
   finishedAt   DateTime?
   error        String?
-  stats        Json?           // e.g. { commits: 1200, prs: 340, issues: 210 }
+  stats        String?         // JSON, e.g. { commits: 1200, prs: 340, issues: 210 }
 
   createdAt    DateTime        @default(now())
 
